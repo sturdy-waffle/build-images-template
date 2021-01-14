@@ -13,10 +13,8 @@ jobs:
       image_tag:
         description: The tag to use for this docker image
         type: string
-    machine: true
     steps:
       - checkout
-      - setup_remote_docker
       - run:
           name: Login to Cloudsmith
           command: echo "$CLOUDSMITH_API_KEY" | docker login docker.cloudsmith.io --username << parameters.repository >> --password-stdin
