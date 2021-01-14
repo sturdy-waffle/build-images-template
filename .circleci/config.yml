@@ -1,34 +1,43 @@
 version: 2.1
 
+x-job: &job
+  docker:
+    - image: cimg/python:3.7
+  environment:
+    REGISTRY_HOST: docker.cloudsmith.io
+    REGISTRY_REPO: sturdy-waffle/build-images 
+  steps:
+    - checkout
+    - setup_remote_docker
+    - run:
+        name: Prepare Environment
+        command: |
+          echo "export TIME_TAG=`date +%Y%m%d`.$CIRCLE_BUILD_NUM" >> $BASH_ENV
+          echo "export IMAGE_NAME=$REGISTRY_HOST/$REGISTRY_REPO/$CIRCLE_JOB" >> $BASH_ENV
+    - run:
+        name: Login to Cloudsmith
+        command: echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_HOST -u $REGISTRY_USERNAME --password-stdin
+    - run:
+        name: Pull Existing Image
+        command: docker pull $IMAGE_NAME:latest || exit 0
+    - run:
+        name: Build Docker Image
+        command: docker build --cache-from $IMAGE_NAME:latest -t $IMAGE_NAME:$TIME_TAG $CIRCLE_JOB/
+    - run:
+        name: Tag Docker Image
+        command: docker tag $IMAGE_NAME:$TIME_TAG $IMAGE_NAME:latest
+    - run:
+        name: Push Docker Image
+        command: |
+          docker push $IMAGE_NAME:$TIME_TAG
+          docker push $IMAGE_NAME:latest
+
 jobs:
-  build_and_publish:
-    parameters:
-      repository:
-        description: The docker repository to use for this image
-        type: string
-      image_name:
-        description: The docker image to build
-        type: string
-      image_tag:
-        description: The tag to use for this docker image
-        type: string
-    machine: true
-    steps:
-      - checkout
-      - run:
-          name: Login to Cloudsmith
-          command: echo "$REGISTRY_PASSWORD" | docker login docker.cloudsmith.io --username $REGISTRY_USERNAME --password-stdin
-      - run:
-          name: Build Docker Image
-          command: docker build -t docker.cloudsmith.io/<< parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >> << parameters.image_name >>
-      - run:
-          name: Push Docker Image
-          command: docker push docker.cloudsmith.io/<< parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >>
+  debian-build:
+    <<: *job
 
 workflows:
+  version: 2
   build_and_publish:
     jobs:
-      - build_and_publish:
-          image_name: debian-build
-          image_tag: latest
-          repository: sturdy-waffle/build-images
+      - debian-build
