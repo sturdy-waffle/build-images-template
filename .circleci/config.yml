@@ -17,7 +17,7 @@ jobs:
       - checkout
       - run:
           name: Login to Cloudsmith
-          command: echo "$CLOUDSMITH_API_KEY" | docker login docker.cloudsmith.io --username << parameters.repository >> --password-stdin
+          command: echo "$REGISTRY_PASSWORD" | docker login docker.cloudsmith.io --username $REGISTRY_USERNAME --password-stdin
       - run:
           name: Build Docker Image
           command: docker build -t << parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >> << parameters.image_name >>
