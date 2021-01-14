@@ -1,0 +1,88 @@
+version: 2.1
+
+orbs:
+  cloudsmith: cloudsmith/cloudsmith@1.0.1
+
+parameters:
+  app-version:
+    default: ""
+    type: string
+  build_and_publish_app:
+    default: false
+    type: boolean
+
+x-job: &docker-build-job
+  docker:
+    - image: docker.cloudsmith.io/sturdy-waffle/build-images/circleci-python:3.7
+      auth:
+        username: $IMAGES_REGISTRY_USERNAME
+        password: $IMAGES_REGISTRY_PASSWORD
+  environment:
+    REGISTRY_HOST: docker.cloudsmith.io
+    REGISTRY_REPO: sturdy-waffle/build-images 
+  steps:
+    - checkout
+    - setup_remote_docker
+    - run:
+        name: Prepare Environment
+        command: |
+          echo "export IMAGE_TAG=${VERSION_TAG:-`date +%Y%m%d`.$CIRCLE_BUILD_NUM}" >> $BASH_ENV
+          echo "export IMAGE_NAME=$REGISTRY_HOST/$REGISTRY_REPO/$CIRCLE_JOB" >> $BASH_ENV
+          echo "$CLOUDSMITH_ENTITLEMENT_TOKEN" > token
+    - run:
+        name: Login to Cloudsmith
+        command: echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_HOST -u $REGISTRY_USERNAME --password-stdin
+    - run:
+        name: Build Docker Image
+        command: docker build -t $IMAGE_NAME:$IMAGE_TAG $CIRCLE_JOB/
+    - run:
+        name: Tag Docker Image
+        command: docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
+    - run:
+        name: Push Docker Image
+        command: |
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          docker push $IMAGE_NAME:latest
+
+jobs:
+  debian-build:
+    <<: *docker-build-job
+  image-build:
+    <<: *docker-build-job
+  sturdy-waffle:
+    <<: *docker-build-job
+    environment:
+      REGISTRY_HOST: docker.cloudsmith.io
+      REGISTRY_REPO: sturdy-waffle/releases-staging
+      VERSION_TAG: << pipeline.parameters.app-version >>
+
+workflows:
+  version: 2
+  build-and-publish-base-images:
+    unless: << pipeline.parameters.build_and_publish_app >>
+    jobs:
+      - debian-build:
+          context:
+            - cloudsmith-credentials
+      - image-build:
+          context:
+            - cloudsmith-credentials
+  nightly:
+    unless: << pipeline.parameters.build_and_publish_app >>
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                  - main
+    jobs:
+      - image-build:
+          context:
+            - cloudsmith-credentials
+  build-and-publish-app:
+    when: << pipeline.parameters.build_and_publish_app >>
+    jobs:
+      - sturdy-waffle:
+          context:
+            - cloudsmith-credentials

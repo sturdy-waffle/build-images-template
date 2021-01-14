@@ -1,0 +1,3 @@
+deb http://security.ubuntu.com/ubuntu/ focal-security main restricted
+deb http://security.ubuntu.com/ubuntu/ focal-security universe
+deb http://security.ubuntu.com/ubuntu/ focal-security multiverse
