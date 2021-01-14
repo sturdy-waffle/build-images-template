@@ -1,0 +1,36 @@
+version: 2.1
+# Use a package of configuration called an orb.
+
+jobs:
+  build_and_publish:
+    parameters:
+      repository:
+        description: The docker repository to use for this image
+        type: string
+      image_name:
+        description: The docker image to build
+        type: string
+      image_tag:
+        description: The tag to use for this docker image
+        type: string
+    machine: true
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Login to Cloudsmith
+          command: echo "$CLOUDSMITH_API_KEY" | docker login docker.cloudsmith.io --username << parameters.repository >> --password-stdin
+      - run:
+          name: Build Docker Image
+          command: docker build -t << parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >> << parameters.image_name >>
+      - run:
+          name: Push Docker Image
+          command: docker push << parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >> << parameters.image_name >>
+
+workflows:
+  build_and_publish:
+    jobs:
+      - build_and_publish:
+          image_name: debian-build
+          image_tag: latest
+          repository: sturdy-waffle/build-images
