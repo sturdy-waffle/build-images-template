@@ -1,5 +1,4 @@
 version: 2.1
-# Use a package of configuration called an orb.
 
 jobs:
   build_and_publish:
@@ -13,6 +12,7 @@ jobs:
       image_tag:
         description: The tag to use for this docker image
         type: string
+    machine: true
     steps:
       - checkout
       - run:
