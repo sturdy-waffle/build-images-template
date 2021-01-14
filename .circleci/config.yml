@@ -23,7 +23,7 @@ jobs:
           command: docker build -t docker.cloudsmith.io/<< parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >> << parameters.image_name >>
       - run:
           name: Push Docker Image
-          command: docker push docker.cloudsmith.io/<< parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >> << parameters.image_name >>
+          command: docker push docker.cloudsmith.io/<< parameters.repository >>/<< parameters.image_name >>:<< parameters.image_tag >>
 
 workflows:
   build_and_publish:
